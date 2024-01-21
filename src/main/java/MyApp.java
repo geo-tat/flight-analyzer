@@ -1,6 +1,7 @@
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -12,11 +13,13 @@ public class MyApp {
             return;
         }
           String jsonPath = args[0];
- //             File file = new File("src/main/resources/tickets.json");
+      //        File file = new File("src/main/resources/tickets.json");
+              File filePath = new File(jsonPath);
+
         Analyzer analyzer = new Analyzer();
         try {
             ObjectMapper objectMapper = new ObjectMapper();
-            FlightList flightsArray = objectMapper.readValue(jsonPath, FlightList.class);
+            FlightList flightsArray = objectMapper.readValue(filePath, FlightList.class);
 
             List<Flight> list = flightsArray.getTickets()
                     .stream()
