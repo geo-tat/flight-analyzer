@@ -5,32 +5,23 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Analyzer {
 
 
     void minFlightDuration(List<Flight> list) {
-        Map<String, Duration> finalMap = new HashMap<>();
+        Map<String, Optional<Duration>> minDurationsByCarrier = list.stream()
+                .collect(Collectors.groupingBy(Flight::getCarrier, TreeMap::new,
+                        Collectors.mapping(this::getDuration, Collectors.minBy(Comparator.naturalOrder())))
+                );
 
-        for (Flight flight : list) {
-            Duration duration = getDuration(flight);
-            String carrier = flight.getCarrier();
-
-            if (finalMap.containsKey(carrier)) {
-                Duration currentDuration = finalMap.get(carrier);
-
-                if (duration.compareTo(currentDuration) < 0) {
-                    finalMap.put(carrier, duration);
-                }
-            } else {
-                finalMap.put(carrier, duration);
-            }
-        }
-
-        finalMap.forEach((carrier, duration) -> {
-            long hours = duration.toHours();
-            long minutes = duration.minusHours(hours).toMinutes();
-            System.out.println("Перевозчик " + carrier + ". Минимальное время полета: " + hours + " часов " + minutes + " минут");
+        minDurationsByCarrier.forEach((carrier, duration) -> {
+            duration.ifPresent(minDuration -> {
+                long hours = minDuration.toHours();
+                long minutes = minDuration.minusHours(hours).toMinutes();
+                System.out.println("Перевозчик " + carrier + ". Минимальное время полета: " + hours + " часов " + minutes + " минут");
+            });
         });
     }
 
@@ -62,17 +53,32 @@ public class Analyzer {
 
     private Duration getDuration(Flight flight) {
 
-            DateTimeFormatter formatter = new DateTimeFormatterBuilder()
-                    .appendPattern("[H:mm][h:mm]")
-                    .toFormatter();
+        DateTimeFormatter formatter = new DateTimeFormatterBuilder()
+                .appendPattern("[H:mm][h:mm]")
+                .toFormatter();
 
-            LocalDateTime departure = LocalDateTime.ofInstant(flight.getDepartureDate().toInstant(), ZoneId.systemDefault())
-                    .with(LocalTime.parse(flight.getDepartureTime(), formatter));
+        LocalDateTime departure = LocalDateTime.ofInstant(flight.getDepartureDate().toInstant(), ZoneId.systemDefault())
+                .with(LocalTime.parse(flight.getDepartureTime(), formatter));
 
-            LocalDateTime arrival = LocalDateTime.ofInstant(flight.getArrivalDate().toInstant(), ZoneId.systemDefault())
-                    .with(LocalTime.parse(flight.getArrivalTime(), formatter));
+        LocalDateTime arrival = LocalDateTime.ofInstant(flight.getArrivalDate().toInstant(), ZoneId.systemDefault())
+                .with(LocalTime.parse(flight.getArrivalTime(), formatter));
 
-            return Duration.between(departure, arrival);
+        return Duration.between(departure, arrival);
+
+    }
+
+    public List<Flight> validateRoute(FlightList flights) {
+        List<Flight> list = flights.getTickets()
+                .stream()
+                .filter(flight -> "Владивосток".equals(flight.getOriginName()))
+                .filter(flight -> "Тель-Авив".equals(flight.getDestinationName()))
+                .collect(Collectors.toList());
+
+        if (list.isEmpty()) {
+            System.out.println("Нет рейсов с нужным маршрутом");
+        }
+
+        return list;
     }
 }
 
